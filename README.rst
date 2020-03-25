@@ -74,6 +74,15 @@ multiplied by the speed limit. There are two advantages to this: the size of
 the graph will be smaller and the cost function will be doing less work, which
 may improve performance.
 
+
+[FORK SPECIFIC COMMENT] Multi-Path support
+==========================================
+In this fork, multi-path is now supported in the computation. 
+Usage is unchanged, but now the find_path method will return a list of 
+PathInfo class object, one for each available path (with equal cost).
+
+
+
 Graph Export & Import
 =====================
 
