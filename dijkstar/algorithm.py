@@ -125,7 +125,8 @@ def single_source_shortest_paths(graph, s, d=None, annex=None, cost_func=None,
     # predecessor node, edge traversed to reach predecessor node, and
     # cost to traverse the edge from the predecessor node to the reached
     # node.
-    predecessors = {s: (None, None, None)}
+    # predecessors = {s: (None, None, None)}
+    predecessors = {s: [(None, None, None)]}
 
     # A priority queue of nodes with known costs from s. The nodes in
     # this queue are candidates for visitation. Nodes are added to this
@@ -166,8 +167,10 @@ def single_source_shortest_paths(graph, s, d=None, annex=None, cost_func=None,
             continue
 
         # The edge crossed to get to u
-        prev_e = predecessors[u][1]
-
+        if len(predecessors[u]) > 0:
+            prev_e = predecessors[u][0][1]         ## DEFAULT VALUE - NOT USED IN OBS IMPLEMENTATION
+        else:
+            prev_e = None    
         # Check each of u's neighboring nodes to see if we can update
         # its cost by reaching it from u.
         for v in neighbors:
@@ -193,8 +196,11 @@ def single_source_shortest_paths(graph, s, d=None, annex=None, cost_func=None,
             if heuristic_func:
                 additional_cost = heuristic_func(u, v, e, prev_e)
                 cost_of_s_to_u_plus_cost_of_e += additional_cost
+            
+            if v not in predecessors.keys():
+                predecessors[v] = []
 
-            if v not in costs or costs[v] > cost_of_s_to_u_plus_cost_of_e:
+            if v not in costs or costs[v] >= cost_of_s_to_u_plus_cost_of_e:
                 # If the current known cost from s to v is greater than
                 # the cost of the path that was just found (cost of s to
                 # u plus cost of u to v across e), update v's cost in
@@ -202,10 +208,11 @@ def single_source_shortest_paths(graph, s, d=None, annex=None, cost_func=None,
                 # predecessor list (it's now u). Note that if ``v`` is
                 # not present in the ``costs`` list, its current cost
                 # is considered to be infinity.
+                # print('cost_of_s_to_u_plus_cost_of_e:{}'.format(cost_of_s_to_u_plus_cost_of_e))
                 costs[v] = cost_of_s_to_u_plus_cost_of_e
-                predecessors[v] = (u, e, cost_of_e)
+                predecessors[v].append((u, e, cost_of_e))
                 heappush(visit_queue, (cost_of_s_to_u_plus_cost_of_e, next(counter), v))
-
+ 
     if d is not None and d not in costs:
         raise NoPathError('Could not find a path from {0} to {1}'.format(s, d))
 
@@ -225,23 +232,37 @@ def extract_shortest_path_from_predecessor_list(predecessors, d):
         Destination node
 
     Returns
-        A :class:`PathInfo` object.
+        A list of :class:`PathInfo` object.
 
     """
     nodes = [d]  # Nodes on the shortest path from s to d
     edges = []   # Edges on the shortest path from s to d
     costs = []   # Costs of the edges on the shortest path from s to d
-    u, e, cost = predecessors[d]
-    while u is not None:
-        # u is the node from which v was reached, e is the edge
-        # traversed to reach v from u, and cost is the cost of u to
-        # v over e. (Note that v is implicit--it's the previous u).
-        nodes.append(u)
-        edges.append(e)
-        costs.append(cost)
-        u, e, cost = predecessors[u]
-    nodes.reverse()
-    edges.reverse()
-    costs.reverse()
-    total_cost = sum(costs)
-    return PathInfo(nodes, edges, costs, total_cost)
+    PathInfoList = []
+
+    ## Calling a recursive function in order to explore all possible best paths.
+    ## This append a PathInfo tuple to PathInfoList directly (python "pointer" behavior !!)
+    unit_extract(predecessors,currentNode=d,nodesList=nodes,edgesList=edges,costsList=costs,PathInfoList=PathInfoList)
+        
+    return PathInfoList
+
+
+def unit_extract(predecessors, currentNode, nodesList, edgesList, costsList, PathInfoList=[]):
+    
+    for path in predecessors[currentNode]:
+        nodes = nodesList.copy()
+        costs = costsList.copy()
+        edges = edgesList.copy()
+        u, e, cost = path
+        print(path)
+        if u is None:
+            nodes.reverse()
+            edges.reverse()
+            costs.reverse()
+            PathInfoList.append(PathInfo(nodes, edges, costs, sum(costs)))
+        else:
+            nodes.append(u)
+            costs.append(cost)
+            edges.append(e)
+            unit_extract(predecessors, currentNode=u, nodesList=nodes,edgesList=edges, costsList=costs, PathInfoList=PathInfoList)
+    
